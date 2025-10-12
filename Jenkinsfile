@@ -96,6 +96,8 @@ pipeline {
             -Jjmeter.save.saveservice.output_format=csv \
             -Jjmeter.save.saveservice.response_data=false \
             -Jjmeter.save.saveservice.samplerData=false \
+            -Jthreads=${threads} -Jramp=${ramp} -Jloops=${loops} -JSLA_MS=${SLA_MS} \
+            -Jhost=${AUT_HOST} -Jport=${AUT_PORT} \
             -Jjmeter.save.saveservice.responseHeaders=false
           JMETER_EXIT_CODE=\$?
           set -e
