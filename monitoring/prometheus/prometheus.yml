@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # Node.js AUT metrics
+  - job_name: "application"
+    static_configs:
+      - targets: ["application:3000"]
+    metrics_path: /metrics
+
+  # JMeter run metrics (ephemeral). Jenkins docker run names the container "jmeter-run"
+  - job_name: "jmeter"
+    static_configs:
+      - targets: ["jmeter-run:9270"]
