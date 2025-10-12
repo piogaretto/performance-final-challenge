@@ -136,81 +136,82 @@ pipeline {
 
     stage('Generate Performance Reports') {
       steps {
-        sh """
-          echo "=== Generating Comprehensive Performance Reports ==="
-          mkdir -p ${REPORTS_DIR}/generated
+        sh '''
+              echo "=== Generating Comprehensive Performance Reports ==="
+              mkdir -p "$REPORTS_DIR/generated"
 
-          cat > ${REPORTS_DIR}/generated/performance_summary.html << 'EOF'
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Performance Test Summary - Build #${BUILD_NUMBER}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { background-color: #f8f9fa; padding: 15px; border-radius: 5px; }
-        .metrics { display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0; }
-        .metric-card { background: #e3f2fd; padding: 15px; border-radius: 5px; min-width: 200px; }
-        .success { color: #4caf50; } .warning { color: #ff9800; } .error { color: #f44336; }
-        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🚀 Performance Test Report</h1>
-        <p><strong>Build:</strong> #${BUILD_NUMBER} | <strong>Branch:</strong> ${env.BRANCH_NAME ?: env.GIT_BRANCH ?: 'develop'} | <strong>Date:</strong> $(date)</p>
-        <p><strong>Test Environment:</strong> Docker Containerized | <strong>Application:</strong> E-commerce API</p>
-    </div>
-EOF
+              # BRANCH fallback (si no hay BRANCH_NAME en jobs no multibranch)
+              BRANCH_VAL="${BRANCH_NAME:-${GIT_BRANCH:-develop}}"
 
-          if [ -f "${OUT_DIR}/results.jtl" ]; then
-            TOTAL_REQUESTS=\$(tail -n +2 "${OUT_DIR}/results.jtl" | wc -l)
-            SUCCESS_REQUESTS=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '\$8=="true"' | wc -l)
-            ERROR_REQUESTS=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '\$8=="false"' | wc -l)
-            SUCCESS_RATE=\$(echo "\$SUCCESS_REQUESTS \$TOTAL_REQUESTS" | awk '{printf "%.1f", \$1 * 100 / \$2}')
-            ERROR_RATE=\$(echo "\$ERROR_REQUESTS \$TOTAL_REQUESTS" | awk '{printf "%.1f", \$1 * 100 / \$2}')
-            AVG_RESPONSE=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '{sum+=\$2; count++} END {if(count>0) print int(sum/count); else print 0}')
-            MIN_RESPONSE=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' 'NR==2{min=\$2} {if(\$2<min) min=\$2} END {print int(min)}')
-            MAX_RESPONSE=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '{if(\$2>max) max=\$2} END {print int(max)}')
+              cat > "$REPORTS_DIR/generated/performance_summary.html" << EOF
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Performance Test Summary - Build #$BUILD_NUMBER</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { background-color: #f8f9fa; padding: 15px; border-radius: 5px; }
+            .metrics { display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0; }
+            .metric-card { background: #e3f2fd; padding: 15px; border-radius: 5px; min-width: 200px; }
+            .success { color: #4caf50; } .warning { color: #ff9800; } .error { color: #f44336; }
+            table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🚀 Performance Test Report</h1>
+            <p><strong>Build:</strong> #$BUILD_NUMBER | <strong>Branch:</strong> $BRANCH_VAL | <strong>Date:</strong> $(date)</p>
+            <p><strong>Test Environment:</strong> Docker Containerized | <strong>Application:</strong> E-commerce API</p>
+          </div>
+        EOF
 
-            # p95 (índice entero por ordenación)
-            P95_RESPONSE=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '{print \$2}' | sort -n | awk ' {a[NR]=\$1} END{ if (NR==0) print 0; else { idx=int(0.95*NR); if(idx<1) idx=1; if(idx>NR) idx=NR; print a[idx] } }')
+              if [ -f "$OUT_DIR/results.jtl" ]; then
+                TOTAL_REQUESTS=$(tail -n +2 "$OUT_DIR/results.jtl" | wc -l)
+                SUCCESS_REQUESTS=$(tail -n +2 "$OUT_DIR/results.jtl" | awk -F',' '$8=="true"' | wc -l)
+                ERROR_REQUESTS=$(tail -n +2 "$OUT_DIR/results.jtl" | awk -F',' '$8=="false"' | wc -l)
+                SUCCESS_RATE=$(echo "$SUCCESS_REQUESTS $TOTAL_REQUESTS" | awk '{printf "%.1f", $1*100/$2}')
+                ERROR_RATE=$(echo "$ERROR_REQUESTS $TOTAL_REQUESTS" | awk '{printf "%.1f", $1*100/$2}')
+                AVG_RESPONSE=$(tail -n +2 "$OUT_DIR/results.jtl" | awk -F',' '{sum+=$2; n++} END{print (n>0?int(sum/n):0)}')
+                MIN_RESPONSE=$(tail -n +2 "$OUT_DIR/results.jtl" | awk -F',' 'NR==2{min=$2} {if($2<min) min=$2} END{print int(min+0)}')
+                MAX_RESPONSE=$(tail -n +2 "$OUT_DIR/results.jtl" | awk -F',' '{if($2>m) m=$2} END{print int(m+0)}')
+                P95_RESPONSE=$(tail -n +2 "$OUT_DIR/results.jtl" | awk -F',' '{print $2}' | sort -n | awk '{a[NR]=$1} END{ if (NR==0) print 0; else { idx=int(0.95*NR); if(idx<1) idx=1; if(idx>NR) idx=NR; print a[idx] } }')
 
-            cat >> ${REPORTS_DIR}/generated/performance_summary.html << EOF
-    <div class="metrics">
-        <div class="metric-card">
-            <h3>📊 Test Volume</h3>
-            <p><strong>\$TOTAL_REQUESTS</strong> Total Requests</p>
-        </div>
-        <div class="metric-card">
-            <h3>✅ Success Rate</h3>
-            <p class="success"><strong>\$SUCCESS_RATE%</strong> (\$SUCCESS_REQUESTS/\$TOTAL_REQUESTS)</p>
-        </div>
-        <div class="metric-card">
-            <h3>⚡ Response Times</h3>
-            <p><strong>\${AVG_RESPONSE}ms</strong> Avg · <strong>\${P95_RESPONSE}ms</strong> p95</p>
-            <p><strong>\${MIN_RESPONSE}ms - \${MAX_RESPONSE}ms</strong> Range</p>
-        </div>
-    </div>
+                cat >> "$REPORTS_DIR/generated/performance_summary.html" << EOF
+          <div class="metrics">
+            <div class="metric-card">
+              <h3>📊 Test Volume</h3>
+              <p><strong>$TOTAL_REQUESTS</strong> Total Requests</p>
+            </div>
+            <div class="metric-card">
+              <h3>✅ Success Rate</h3>
+              <p class="success"><strong>$SUCCESS_RATE%</strong> ($SUCCESS_REQUESTS/$TOTAL_REQUESTS)</p>
+            </div>
+            <div class="metric-card">
+              <h3>⚡ Response Times</h3>
+              <p><strong>${AVG_RESPONSE}ms</strong> Avg · <strong>${P95_RESPONSE}ms</strong> p95</p>
+              <p><strong>${MIN_RESPONSE}ms - ${MAX_RESPONSE}ms</strong> Range</p>
+            </div>
+          </div>
 
-    <h2>🔗 Additional Reports</h2>
-    <ul>
-        <li><a href="jmeter-report/index.html">📊 Detailed JMeter HTML Report</a></li>
-        <li><a href="results.jtl">📄 Raw Test Results (JTL)</a></li>
-      </ul>
-EOF
-          fi
+          <h2>🔗 Additional Reports</h2>
+          <ul>
+            <li><a href="jmeter-report/index.html">📊 Detailed JMeter HTML Report</a></li>
+            <li><a href="results.jtl">📄 Raw Test Results (JTL)</a></li>
+          </ul>
+        EOF
+              fi
 
-          cat >> ${REPORTS_DIR}/generated/performance_summary.html << 'EOF'
-</body>
-</html>
-EOF
+              cat >> "$REPORTS_DIR/generated/performance_summary.html" << 'EOF'
+        </body>
+        </html>
+        EOF
 
-          echo "Performance summary report generated"
-        """
-      }
-    }
+              echo "Performance summary report generated"
+            '''
+  }
+}
 
     stage('Collect Prometheus Metrics') {
       steps {
