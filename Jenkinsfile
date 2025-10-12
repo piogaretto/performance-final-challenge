@@ -21,6 +21,13 @@ pipeline {
     SLA_MAX_MS = '5000'
   }
 
+  parameters {
+    string(name: 'threads', defaultValue: '10', description: 'Usuarios concurrentes')
+    string(name: 'ramp',    defaultValue: '30', description: 'Ramp-up (s)')
+    string(name: 'loops',   defaultValue: '5',  description: 'Loops por usuario')
+    string(name: 'SLA_MS',  defaultValue: '800', description: 'SLA por request (ms)')
+  }
+
   stages {
     stage('Checkout') {
       steps {
