@@ -15,9 +15,7 @@ RUN mkdir -p /tmp/dependencies \
     && tar -xzf /tmp/dependencies/apache-jmeter-${JMETER_VERSION}.tgz -C /opt \
     && rm -rf /tmp/dependencies
 
-# For educational purposes, we'll create a simple JMeter setup
-# In production, you would add the Prometheus listener JAR here
-# COPY jmeter-prometheus-listener.jar ${JMETER_HOME}/lib/ext/jmeter-prometheus-listener.jar
+COPY jmeter-prometheus-plugin.jar ${JMETER_HOME}/lib/ext/jmeter-prometheus-plugin.jar
 
 # Expose the Prometheus scrape port used by the listener
 EXPOSE 9270

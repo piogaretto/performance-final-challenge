@@ -72,6 +72,7 @@ pipeline {
           docker run -d \
             --name ${JMETER_CONTAINER_NAME} \
             --network=${DOCKER_NETWORK} \
+            -p 9270:9270 \
             --memory=1g \
             --memory-swap=2g \
             --shm-size=256m \
