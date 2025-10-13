@@ -32,7 +32,7 @@
             </collectionProp>
             <stringProp name="collector.quantiles_or_buckets">50,100,200,300,400,500,750,1000,2000</stringProp>
             <stringProp name="listener.collector.listen_to">samples</stringProp>
-            <stringProp name="listener.collector.measuring">ConnectTime</stringProp>
+            <stringProp name="listener.collector.measuring">ResponseTime</stringProp>
           </elementProp>
           <elementProp name="" elementType="com.github.johrstrom.listener.ListenerCollectorConfig">
             <stringProp name="collector.help">default help string</stringProp>
@@ -42,7 +42,7 @@
               <stringProp name="102727412">label</stringProp>
             </collectionProp>
             <stringProp name="collector.quantiles_or_buckets"></stringProp>
-            <stringProp name="listener.collector.measuring">FailureTotal</stringProp>
+            <stringProp name="listener.collector.measuring">CountTotal</stringProp>
           </elementProp>
           <elementProp name="" elementType="com.github.johrstrom.listener.ListenerCollectorConfig">
             <stringProp name="collector.help">default help string</stringProp>
