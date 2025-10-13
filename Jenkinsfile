@@ -92,6 +92,7 @@ pipeline {
           timeout 300 docker exec ${JMETER_CONTAINER_NAME} jmeter -n \
             -t /work/jmeter/test-plan.jmx \
             -l /work/out/results.jtl \
+            -j /work/out/jmeter.log \
             -e -o /work/out/jmeter-report \
             -f \
             -Jjmeter.save.saveservice.output_format=csv \
