@@ -98,9 +98,9 @@ pipeline {
             -Jjmeter.save.saveservice.output_format=csv \
             -Jjmeter.save.saveservice.response_data=false \
             -Jjmeter.save.saveservice.samplerData=false \
-            -Jprometheus.host=0.0.0.0 \
+            -Jprometheus.ip=0.0.0.0 \
             -Jprometheus.port=9270 \
-            -Dprometheus.host=0.0.0.0 \
+            -Dprometheus.ip=0.0.0.0 \
             -Dprometheus.port=9270 \
             -Jthreads=${threads} -Jramp=${ramp} -Jloops=${loops} -JSLA_MS=${SLA_MS} \
             -Jhost=${AUT_HOST} -Jport=${AUT_PORT} \
