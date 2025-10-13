@@ -228,23 +228,35 @@ pipeline {
   }
 }
 
-    stage('Collect Prometheus Metrics') {
-      steps {
-        script {
-          try {
-            sh """
-              echo "=== Collecting Current Prometheus Metrics ==="
-              sleep 5
-              curl -s "http://prometheus:9090/api/v1/query?query=http_request_duration_ms_count" | jq . > ${OUT_DIR}/prometheus_metrics.json || echo "Could not collect Prometheus metrics"
-              curl -s "http://prometheus:9090/api/v1/query?query=rate(http_request_duration_ms_count[5m])" | jq . > ${OUT_DIR}/prometheus_rates.json || echo "Could not collect rate metrics"
-              echo "Prometheus metrics collected"
-            """
-          } catch (Exception e) {
-            echo "Warning: Could not collect Prometheus metrics: ${e.message}"
-          }
-        }
-      }
-    }
+    stage('Collect Prometheus Metrics (JMeter)') {
+  steps {
+    sh """
+      set -e
+      echo "=== Collecting JMeter metrics from Prometheus ==="
+      mkdir -p ${OUT_DIR}/prom
+
+      # RPS por sampler (label)
+      curl -s -G "http://prometheus:9090/api/v1/query" \
+        --data-urlencode 'query=sum by (label) (rate(jmeter_requests_total[1m]))' \
+        | jq . > ${OUT_DIR}/prom/jmeter_rps_by_label.json || true
+
+      # Error % global (ventana 1m)
+      curl -s -G "http://prometheus:9090/api/v1/query" \
+        --data-urlencode 'query=100 * ( sum(rate(jmeter_requests_errors_total[1m])) or vector(0) ) / clamp_min(sum(rate(jmeter_requests_total[1m])), 1e-9 )' \
+        | jq . > ${OUT_DIR}/prom/jmeter_error_pct.json || true
+
+      # p95 por sampler (ms) desde histograma
+      curl -s -G "http://prometheus:9090/api/v1/query" \
+        --data-urlencode 'query=histogram_quantile(0.95, sum by (le,label) (rate(jmeter_request_duration_ms_bucket[1m])))' \
+        | jq . > ${OUT_DIR}/prom/jmeter_p95_by_label.json || true
+
+      # (Opcional) dump directo del endpoint del listener
+      curl -s http://jmeter-run:9270/metrics > ${OUT_DIR}/prom/jmeter_raw_metrics.txt || true
+
+      echo "✔ JMeter metrics collected → ${OUT_DIR}/prom"
+    """
+  }
+}
 
     stage('Archive Results') {
       steps {
