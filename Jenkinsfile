@@ -151,7 +151,7 @@ pipeline {
 
     stage('Generate Performance Reports') {
       steps {
-        sh """
+        sh '''
           set -e
           echo "=== Generating Performance Summary ==="
 
@@ -161,91 +161,93 @@ pipeline {
 
           # ---- métricas desde out/results.jtl ----
           if [ -f "${OUT_DIR}/results.jtl" ]; then
-            TOTAL_REQUESTS=\$(tail -n +2 "${OUT_DIR}/results.jtl" | wc -l)
-            SUCCESS_REQUESTS=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '\$8=="true"' | wc -l)
-            ERROR_REQUESTS=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '\$8=="false"' | wc -l)
+            TOTAL_REQUESTS=$(tail -n +2 "${OUT_DIR}/results.jtl" | wc -l)
+            SUCCESS_REQUESTS=$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '$8=="true"' | wc -l)
+            ERROR_REQUESTS=$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '$8=="false"' | wc -l)
 
-            if [ "\$TOTAL_REQUESTS" -gt 0 ]; then
-              SUCCESS_RATE=\$(awk -v s=\$SUCCESS_REQUESTS -v t=\$TOTAL_REQUESTS 'BEGIN{printf "%.1f", (s*100)/t}')
-              ERROR_RATE=\$(awk -v e=\$ERROR_REQUESTS -v t=\$TOTAL_REQUESTS 'BEGIN{printf "%.1f", (e*100)/t}')
+            if [ "$TOTAL_REQUESTS" -gt 0 ]; then
+              SUCCESS_RATE=$(awk -v s=$SUCCESS_REQUESTS -v t=$TOTAL_REQUESTS 'BEGIN{printf "%.1f", (s*100)/t}')
+              ERROR_RATE=$(awk -v e=$ERROR_REQUESTS -v t=$TOTAL_REQUESTS 'BEGIN{printf "%.1f", (e*100)/t}')
             else
               SUCCESS_RATE="0.0"; ERROR_RATE="0.0"
             fi
 
-            AVG_RESPONSE=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '{sum+=\$2; n++} END{print (n>0?int(sum/n):0)}')
-            MIN_RESPONSE=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' 'NR==1{m=\$2} {if(\$2<m)m=\$2} END{print (m==""?0:int(m))}')
-            MAX_RESPONSE=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '{if(\$2>M)M=\$2} END{print (M==""?0:int(M))}')
-            P95_RESPONSE=\$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '{print \$2}' | sort -n | awk '{a[NR]=\$1} END{if(NR==0)print 0; i=int(0.95*NR); if(i<1)i=1; if(i>NR)i=NR; print a[i] }')
+            AVG_RESPONSE=$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '{sum+=$2; n++} END{print (n>0?int(sum/n):0)}')
+            MIN_RESPONSE=$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' 'NR==1{m=$2} {if($2<m)m=$2} END{print (m==""?0:int(m))}')
+            MAX_RESPONSE=$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '{if($2>M)M=$2} END{print (M==""?0:int(M))}')
+            P95_RESPONSE=$(tail -n +2 "${OUT_DIR}/results.jtl" | awk -F',' '{print $2}' | sort -n | awk '{a[NR]=$1} END{if(NR==0)print 0; i=int(0.95*NR); if(i<1)i=1; if(i>NR)i=NR; print a[i] }')
           else
             TOTAL_REQUESTS=0; SUCCESS_REQUESTS=0; ERROR_REQUESTS=0
             SUCCESS_RATE="0.0"; ERROR_RATE="0.0"
             AVG_RESPONSE=0; MIN_RESPONSE=0; MAX_RESPONSE=0; P95_RESPONSE=0
           fi
 
-          # rama amigable
-          BRANCH_VAL="\${BRANCH_NAME:-\${GIT_BRANCH:-develop}}"
+          # rama amigable (shell)
+          BRANCH_VAL="${BRANCH_NAME:-${GIT_BRANCH:-develop}}"
 
-          # copiamos artefactos al mismo folder del summary para que los links funcionen
+          # copiamos artefactos para que los links funcionen
           cp -r ${OUT_DIR}/jmeter-report ${REPORTS_DIR}/generated/ 2>/dev/null || true
           cp ${OUT_DIR}/results.jtl ${REPORTS_DIR}/generated/ 2>/dev/null || true
 
           # ---- HTML (encabezado) ----
           cat > ${REPORTS_DIR}/generated/performance_summary.html <<EOF
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8"/>
-              <title>Performance Test Summary - Build #${BUILD_NUMBER}</title>
-              <style>
-                body { font-family: Arial, sans-serif; margin: 20px; }
-                .header { background:#f8f9fa; padding: 14px; border-radius: 6px; }
-                .metrics { display:flex; flex-wrap:wrap; gap:16px; margin: 18px 0; }
-                .card { background:#e3f2fd; padding:14px; border-radius:8px; min-width:220px; }
-                .ok{color:#2e7d32} .warn{color:#ef6c00} .bad{color:#c62828}
-                table{border-collapse:collapse;width:100%;margin-top:12px}
-                th,td{border:1px solid #ddd;padding:8px;text-align:left}
-                th{background:#f2f2f2}
-              </style>
-            </head>
-            <body>
-              <div class="header">
-                <h1>🚀 Performance Test Report</h1>
-                <p><strong>Build:</strong> #${BUILD_NUMBER} |
-                  <strong>Date:</strong> $(date)</p>
-                <p><strong>Test Environment:</strong> Docker Containerized |
-                  <strong>Application:</strong> E-commerce API</p>
-              </div>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8"/>
+      <title>Performance Test Summary - Build #$BUILD_NUMBER</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background:#f8f9fa; padding: 14px; border-radius: 6px; }
+        .metrics { display:flex; flex-wrap:wrap; gap:16px; margin: 18px 0; }
+        .card { background:#e3f2fd; padding:14px; border-radius:8px; min-width:220px; }
+        .ok{color:#2e7d32} .warn{color:#ef6c00} .bad{color:#c62828}
+        table{border-collapse:collapse;width:100%;margin-top:12px}
+        th,td{border:1px solid #ddd;padding:8px;text-align:left}
+        th{background:#f2f2f2}
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>🚀 Performance Test Report</h1>
+        <p><strong>Build:</strong> #$BUILD_NUMBER |
+          <strong>Branch:</strong> $BRANCH_VAL |
+          <strong>Date:</strong> $(date)</p>
+        <p><strong>Test Environment:</strong> Docker Containerized |
+          <strong>Application:</strong> E-commerce API</p>
+      </div>
 
-              <div class="metrics">
-                <div class="card"><h3>📊 Test Volume</h3>
-                  <p><strong>\${TOTAL_REQUESTS}</strong> Total Requests</p></div>
-                <div class="card"><h3>✅ Success Rate</h3>
-                  <p class="\$([ \${SUCCESS_RATE%.*} -ge 95 ] && echo ok || echo warn)">
-                    <strong>\${SUCCESS_RATE}%</strong> (\${SUCCESS_REQUESTS}/\${TOTAL_REQUESTS})
-                  </p></div>
-                <div class="card"><h3>⚡ Response Times</h3>
-                  <p><strong>\${AVG_RESPONSE} ms</strong> Avg · <strong>\${P95_RESPONSE} ms</strong> p95</p>
-                  <p><strong>\${MIN_RESPONSE}–\${MAX_RESPONSE} ms</strong> Range</p>
-                </div>
-              </div>
+      <div class="metrics">
+        <div class="card"><h3>📊 Test Volume</h3>
+          <p><strong>$TOTAL_REQUESTS</strong> Total Requests</p></div>
+        <div class="card"><h3>✅ Success Rate</h3>
+          <p class="$([ ${SUCCESS_RATE%.*} -ge 95 ] && echo ok || echo warn)">
+            <strong>$SUCCESS_RATE%</strong> ($SUCCESS_REQUESTS/$TOTAL_REQUESTS)
+          </p></div>
+        <div class="card"><h3>⚡ Response Times</h3>
+          <p><strong>${AVG_RESPONSE} ms</strong> Avg · <strong>${P95_RESPONSE} ms</strong> p95</p>
+          <p><strong>${MIN_RESPONSE}–${MAX_RESPONSE} ms</strong> Range</p>
+        </div>
+      </div>
 
-              <h2>🔗 Additional Reports</h2>
-              <ul>
-                <li><a href="jmeter-report/index.html">📊 Detailed JMeter HTML Report</a></li>
-                <li><a href="results.jtl">📄 Raw Test Results (JTL)</a></li>
-              </ul>
-            EOF
+      <h2>🔗 Additional Reports</h2>
+      <ul>
+        <li><a href="jmeter-report/index.html">📊 Detailed JMeter HTML Report</a></li>
+        <li><a href="results.jtl">📄 Raw Test Results (JTL)</a></li>
+      </ul>
+    EOF
 
-                  # ---- cierre del HTML (sin expansión) ----
-                  cat >> ${REPORTS_DIR}/generated/performance_summary.html <<'EOF'
-            </body>
-            </html>
-            EOF
+          # ---- cierre del HTML (sin expansión) ----
+          cat >> ${REPORTS_DIR}/generated/performance_summary.html <<'EOF'
+    </body>
+    </html>
+    EOF
 
-                  echo "Performance summary report generated"
-                """
+          echo "Performance summary report generated"
+        '''
   }
 }
+
 
 
     stage('Collect Prometheus Metrics (JMeter)') {
