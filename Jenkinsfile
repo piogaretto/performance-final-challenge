@@ -211,7 +211,6 @@ pipeline {
               <div class="header">
                 <h1>🚀 Performance Test Report</h1>
                 <p><strong>Build:</strong> #${BUILD_NUMBER} |
-                  <strong>Branch:</strong> ${BRANCH_VAL} |
                   <strong>Date:</strong> $(date)</p>
                 <p><strong>Test Environment:</strong> Docker Containerized |
                   <strong>Application:</strong> E-commerce API</p>
