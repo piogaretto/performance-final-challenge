@@ -183,7 +183,7 @@ pipeline {
           fi
 
           # rama amigable (shell)
-          BRANCH_VAL="${BRANCH_NAME:-${GIT_BRANCH:-develop}}"
+          BRANCH_VAL="${BRANCH_NAME:-${GIT_BRANCH:-main}}"
 
           # copiamos artefactos para que los links funcionen
           cp -r ${OUT_DIR}/jmeter-report ${REPORTS_DIR}/generated/ 2>/dev/null || true
