@@ -150,9 +150,9 @@ open http://localhost:8080
 - **Credentials Binding** - Administración de credenciales.
 
 **Plugins de performance:**
-- **Performance** - For JMeter result analysis and trending
-- **HTML Publisher** - For publishing JMeter HTML reports
-- **Plot** - For creating performance trend graphs
+- **Performance** - Para análisis de resultados y reportes.
+- **HTML Publisher** - Para publicar reportes HTML de JMeter
+- **Plot** - Para crear gráficos de rendimiento.
 
 **Plugins de utilidad:**
 - **AnsiColor** - Para salida en consola con colores.
