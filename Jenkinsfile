@@ -15,6 +15,7 @@ pipeline {
     JMETER_IMAGE = 'jmeter-prom:latest'
     JMETER_PROM_PORT = '9270'
     JMETER_CONTAINER_NAME = 'jmeter-run'
+    SLA_P95_MS = "${params.SLA_P95_MS}"
     SLA_ERR_PCT = '1.0'
     SLA_AVG_MS = '1000'
     SLA_MAX_MS = '5000'
@@ -101,7 +102,7 @@ pipeline {
             -Jprometheus.port=9270 \
             -Dprometheus.ip=0.0.0.0 \
             -Dprometheus.port=9270 \
-            -Jthreads=${threads} -Jramp=${ramp} -Jloops=${loops} -JSLA_MS=${SLA_MS} \
+            -Jthreads=${threads} -Jramp=${ramp} -Jloops=${loops} -JSLA_P95_MS=${SLA_P95_MS} \
             -Jhost=${AUT_HOST} -Jport=${AUT_PORT} \
             -Jjmeter.save.saveservice.responseHeaders=false
           JMETER_EXIT_CODE=\$?
@@ -338,59 +339,64 @@ pipeline {
       }
     }
 
-    // ### [CAMBIO] Etapa Quality Gate: decide SUCCESS/UNSTABLE según aserciones y SLA
     stage('Quality Gate (SLA & Assertions)') {
       when { expression { fileExists("${OUT_DIR}/results.jtl") } }
-      steps {
-        sh """
-          echo "=== Quality Gate: Evaluating SLA & Assertions ==="
+        steps {
+      sh """
+      echo "=== Quality Gate: Evaluating SLA & Assertions ==="
 
-          TOTAL=\$(tail -n +2 ${OUT_DIR}/results.jtl | wc -l)
-          FAILS=\$(tail -n +2 ${OUT_DIR}/results.jtl | awk -F',' '\$8=="false"' | wc -l)
-          ERR_PCT=\$(awk -v f=\$FAILS -v t=\$TOTAL 'BEGIN{ if(t==0) print 0; else printf "%.1f", (f*100)/t }')
-          AVG_MS=\$(tail -n +2 ${OUT_DIR}/results.jtl | awk -F',' '{sum+=\$2; n++} END{ if(n==0) print 0; else print int(sum/n) }')
-          MAX_MS=\$(tail -n +2 ${OUT_DIR}/results.jtl | awk -F',' '{if(\$2>m) m=\$2} END{ print int(m+0) }')
-          P95_MS=\$(tail -n +2 ${OUT_DIR}/results.jtl | awk -F',' '{print \$2}' | sort -n | awk ' {a[NR]=\$1} END{ if (NR==0) print 0; else { idx=int(0.95*NR); if(idx<1) idx=1; if(idx>NR) idx=NR; print a[idx] } }')
+      mkdir -p ${OUT_DIR}
+      : > ${OUT_DIR}/quality_gate_reason.txt   # crea o vacía el archivo
 
-          echo "TOTAL=\$TOTAL | FAILS=\$FAILS | ERR_PCT=\$ERR_PCT | AVG_MS=\$AVG_MS | P95_MS=\$P95_MS | MAX_MS=\$MAX_MS"
-          
-          UNSTABLE_REASON=""
-          if [ "\$FAILS" -gt 0 ]; then
-            UNSTABLE_REASON="\$UNSTABLE_REASON Assertions/errores de muestra > 0. "
-          fi
-          # comparar p95 con SLA_P95_MS (enteros)
-          if [ "\$P95_MS" -gt "${SLA_P95_MS}" ]; then
-            UNSTABLE_REASON="\$UNSTABLE_REASON p95 \$P95_MS ms > ${SLA_P95_MS} ms. "
-          fi
-          # comparar error rate con SLA_ERR_PCT (string float) sin 'bc': usamos awk
-          AWK_GT=\$(awk -v a=\$ERR_PCT -v b=${SLA_ERR_PCT} 'BEGIN{ if (a>b) print 1; else print 0 }')
-          if [ "\$AWK_GT" -eq 1 ]; then
-            UNSTABLE_REASON="\$UNSTABLE_REASON Error rate \$ERR_PCT% > ${SLA_ERR_PCT}%. "
-          fi
+      TOTAL=\$(tail -n +2 ${OUT_DIR}/results.jtl | wc -l)
+      FAILS=\$(tail -n +2 ${OUT_DIR}/results.jtl | awk -F',' '\$8=="false"' | wc -l)
+      ERR_PCT=\$(awk -v f=\$FAILS -v t=\$TOTAL 'BEGIN{ if(t==0) print 0; else printf "%.1f", (f*100)/t }')
+      AVG_MS=\$(tail -n +2 ${OUT_DIR}/results.jtl | awk -F',' '{sum+=\$2; n++} END{ if(n==0) print 0; else print int(sum/n) }')
+      MAX_MS=\$(tail -n +2 ${OUT_DIR}/results.jtl | awk -F',' '{if(\$2>m) m=\$2} END{ print int(m+0) }')
+      P95_MS=\$(tail -n +2 ${OUT_DIR}/results.jtl | awk -F',' '{print \$2}' | sort -n | awk ' {a[NR]=\$1} END{ if (NR==0) print 0; else { idx=int(0.95*NR); if(idx<1) idx=1; if(idx>NR) idx=NR; print a[idx] } }')
 
-          echo "UNSTABLE_REASON=\$UNSTABLE_REASON"
-          echo "\$UNSTABLE_REASON" > ${OUT_DIR}/quality_gate_reason.txt
+      echo "TOTAL=\$TOTAL | FAILS=\$FAILS | ERR_PCT=\$ERR_PCT | AVG_MS=\$AVG_MS | P95_MS=\$P95_MS | MAX_MS=\$MAX_MS"
 
-          # Salida NO fatal; dejamos que Jenkinsfile decida con currentBuild.result
-          if [ -n "\$UNSTABLE_REASON" ]; then
-            exit 3
-          else
-            exit 0
-          fi
-        """
-      }
-      post {
-        unsuccessful {
-          script {
-            currentBuild.result = 'UNSTABLE'
-            echo "⚠️  Quality Gate UNSTABLE - Motivo: " + readFile("${OUT_DIR}/quality_gate_reason.txt").trim()
-          }
-        }
-        success {
-          echo "✅ Quality Gate PASS (SLA y aserciones OK)"
-        }
+      UNSTABLE_REASON=""
+      if [ "\$FAILS" -gt 0 ]; then
+        UNSTABLE_REASON="\$UNSTABLE_REASON Assertions/errores de muestra > 0. "
+      fi
+
+      # Compara p95 con SLA (lee la var como ENV, ver punto 2)
+      if [ "\$P95_MS" -gt "${SLA_P95_MS}" ]; then
+        UNSTABLE_REASON="\$UNSTABLE_REASON p95 \$P95_MS ms > ${SLA_P95_MS} ms. "
+      fi
+
+      AWK_GT=\$(awk -v a=\$ERR_PCT -v b=${SLA_ERR_PCT} 'BEGIN{ if (a>b) print 1; else print 0 }')
+      if [ "\$AWK_GT" -eq 1 ]; then
+        UNSTABLE_REASON="\$UNSTABLE_REASON Error rate \$ERR_PCT% > ${SLA_ERR_PCT}%. "
+      fi
+
+      echo "\$UNSTABLE_REASON" > ${OUT_DIR}/quality_gate_reason.txt
+
+      if [ -n "\$UNSTABLE_REASON" ]; then
+        exit 3
+      else
+        exit 0
+      fi
+    """
+  }
+  post {
+    unsuccessful {
+      script {
+        currentBuild.result = 'UNSTABLE'
+        def reason = fileExists("${OUT_DIR}/quality_gate_reason.txt")
+          ? readFile("${OUT_DIR}/quality_gate_reason.txt").trim()
+          : "(no reason file)"
+        echo "⚠️  Quality Gate UNSTABLE - Motivo: ${reason}"
       }
     }
+    success {
+      echo "✅ Quality Gate PASS (SLA y aserciones OK)"
+    }
+  }
+}
+
 
     // (Opcional) análisis más detallado, mantenemos tu lógica
     stage('Performance Analysis') {
