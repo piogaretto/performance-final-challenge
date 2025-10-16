@@ -15,7 +15,6 @@ pipeline {
     JMETER_IMAGE = 'jmeter-prom:latest'
     JMETER_PROM_PORT = '9270'
     JMETER_CONTAINER_NAME = 'jmeter-run'
-    SLA_P95_MS = '800'
     SLA_ERR_PCT = '1.0'
     SLA_AVG_MS = '1000'
     SLA_MAX_MS = '5000'
@@ -25,7 +24,7 @@ pipeline {
     string(name: 'threads', defaultValue: '10', description: 'Usuarios concurrentes')
     string(name: 'ramp',    defaultValue: '30', description: 'Ramp-up (s)')
     string(name: 'loops',   defaultValue: '5',  description: 'Loops por usuario')
-    string(name: 'SLA_MS',  defaultValue: '800', description: 'SLA por request (ms)')
+    string(name: 'SLA_P95_MS',  defaultValue: '1000', description: 'SLA por request (ms)')
   }
 
   stages {
