@@ -398,7 +398,6 @@ pipeline {
 }
 
 
-    // (Opcional) análisis más detallado, mantenemos tu lógica
     stage('Performance Analysis') {
       when { expression { fileExists("${OUT_DIR}/results.jtl") } }
       steps {

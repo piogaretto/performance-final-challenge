@@ -19,7 +19,7 @@
       </elementProp>
     </TestPlan>
     <hashTree>
-      <com.github.johrstrom.listener.PrometheusListener guiclass="com.github.johrstrom.listener.gui.PrometheusListenerGui" testclass="com.github.johrstrom.listener.PrometheusListener" testname="Prometheus Listener" enabled="true">
+      <com.github.johrstrom.listener.PrometheusListener guiclass="com.github.johrstrom.listener.gui.PrometheusListenerGui" testclass="com.github.johrstrom.listener.PrometheusListener" testname="Prometheus Listener -&gt; port: 9270" enabled="true">
         <collectionProp name="prometheus.collector_definitions">
           <elementProp name="" elementType="com.github.johrstrom.listener.ListenerCollectorConfig">
             <stringProp name="collector.help">default help string</stringProp>
@@ -65,7 +65,7 @@
         <stringProp name="HTTPSampler.implementation"></stringProp>
       </ConfigTestElement>
       <hashTree/>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="TG E2E">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="E2E - User Journey">
         <stringProp name="ThreadGroup.num_threads">${__P(threads,10)}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${__P(ramp,30)}</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -237,6 +237,16 @@ assert token &amp;&amp; token.trim() : &quot;No se extrajo TOKEN del login&quot;
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Response = 200">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">assert prev.getResponseCode() as int == 200 : &quot;Auth no devolvió 200, fue ${prev.getResponseCode()}&quot;
+def token = vars.get(&apos;TOKEN&apos;)
+assert token &amp;&amp; token.trim() : &quot;No se extrajo TOKEN del login&quot;</stringProp>
+          </JSR223Assertion>
+          <hashTree/>
           <DurationAssertion guiclass="DurationAssertionGui" testclass="DurationAssertion" testname="Latency &lt; SLA">
             <stringProp name="DurationAssertion.duration">${SLA_MS}</stringProp>
           </DurationAssertion>
