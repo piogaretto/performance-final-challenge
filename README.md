@@ -72,7 +72,7 @@ perf-ecommerce-pipeline/
 
 - **Versión: 5.6.3**
 - **Pruebas E2E parametrizadas:**
-  - Threads, ramp-up, loops, host, port, SLA_MS (por defecto 800 ms)
+  - Threads, ramp-up, loops, host, port, SLA_MS (por defecto 1000 ms)
 Correlación automática de token JWT (login)
 
 - **Aserciones:**
