@@ -100,8 +100,6 @@ pipeline {
             -Jjmeter.save.saveservice.samplerData=false \
             -Jprometheus.ip=0.0.0.0 \
             -Jprometheus.port=9270 \
-            -Dprometheus.ip=0.0.0.0 \
-            -Dprometheus.port=9270 \
             -Jthreads=${threads} -Jramp=${ramp} -Jloops=${loops} -JSLA_P95_MS=${SLA_P95_MS} \
             -Jhost=${AUT_HOST} -Jport=${AUT_PORT} \
             -Jjmeter.save.saveservice.responseHeaders=false
